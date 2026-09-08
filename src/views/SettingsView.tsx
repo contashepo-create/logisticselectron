@@ -6,18 +6,22 @@ import {
   Download,
   Upload,
   RotateCcw,
-  Calendar,
   Percent,
   CheckCircle2,
   AlertTriangle,
+  Cloud,
+  Copy,
+  Check,
 } from "lucide-react";
-import type { Company } from "@/types";
+import type { AppSettings, Company } from "@/types";
 import {
+  getAppSettings,
   getCompany,
+  saveAppSettings,
   saveCompany,
   exportFullDatabaseBackup,
   importFullDatabaseBackup,
-  resetAllDataToDemo,
+  resetAllDataToBlank,
 } from "@/lib/storage";
 
 interface Props {
@@ -27,8 +31,11 @@ interface Props {
 
 export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefreshData }) => {
   const [company, setCompanyState] = useState<Company>(initialCompany);
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => getAppSettings());
   const [successMsg, setSuccessMsg] = useState("");
-  const [activeTab, setActiveTab] = useState<"company" | "fiscal" | "vat" | "backup">("company");
+  const [cloudSuccessMsg, setCloudSuccessMsg] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [activeTab, setActiveTab] = useState<"company" | "vat" | "cloud" | "backup">("company");
 
   const handleSaveCompany = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +43,20 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
     setSuccessMsg("تم حفظ بيانات المنشأة والإعدادات بنجاح.");
     onRefreshData();
     setTimeout(() => setSuccessMsg(""), 3000);
+  };
+
+  const handleSaveCloudSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveAppSettings(appSettings);
+    setCloudSuccessMsg("تم حفظ إعدادات الربط السحابي وبيانات الدعم الفني بنجاح.");
+    onRefreshData();
+    setTimeout(() => setCloudSuccessMsg(""), 3000);
+  };
+
+  const handleCopyClientCode = () => {
+    navigator.clipboard.writeText(company.client_code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleExportBackup = () => {
@@ -70,12 +91,12 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
   const handleResetData = () => {
     if (
       confirm(
-        "تحذير: هل أنت متأكد من رغبتك في إعادة تعيين كافة البيانات إلى البيانات النموذجية الأصلية؟ ستفقد أي سجلات مدخلة حديثاً."
+        "تحذير: سيتم حذف جميع البيانات المدخلة نهائياً (العملاء، الفواتير، الموظفين، السندات...) وإعادة النظام إلى حالته الفارغة الأصلية. هل أنت متأكد من المتابعة؟"
       )
     ) {
-      resetAllDataToDemo();
+      resetAllDataToBlank();
       onRefreshData();
-      alert("تمت استعادة البيانات الافتراضية بنجاح.");
+      alert("تمت إعادة ضبط النظام بنجاح. جميع البيانات الآن فارغة وجاهزة لإدخال بياناتك الحقيقية.");
     }
   };
 
@@ -86,7 +107,7 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
         <div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Settings className="w-5 h-5 text-blue-600" />
-            <span>إعدادات المنشأة والنظام والسنوات المالية</span>
+            <span>الإعدادات</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             تخصيص البيانات الرسمية، إعدادات الضريبة، والنسخ الاحتياطي لقاعدة البيانات
@@ -128,15 +149,15 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
         </button>
 
         <button
-          onClick={() => setActiveTab("fiscal")}
+          onClick={() => setActiveTab("cloud")}
           className={`pb-2.5 flex items-center gap-1.5 transition ${
-            activeTab === "fiscal"
+            activeTab === "cloud"
               ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
               : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
-          <Calendar className="w-4 h-4" />
-          <span>السنوات المالية والإقفال</span>
+          <Cloud className="w-4 h-4" />
+          <span>الربط السحابي (Cloudflare وتليجرام)</span>
         </button>
 
         <button
@@ -318,25 +339,145 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
         </div>
       )}
 
-      {/* Tab: Fiscal Years */}
-      {activeTab === "fiscal" && (
-        <div className="app-card p-6 space-y-4">
-          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">
-            السنوات المالية وفترات المحاسبة
-          </h3>
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-bold text-slate-800 dark:text-slate-100">السنة المالية النشطة:</div>
-                <div className="text-blue-600 font-bold font-mono">2026 M / 1447 H</div>
-              </div>
-              <span className="badge badge-green">مفتوحة للعمليات</span>
+      {/* Tab: Cloud Integration (Cloudflare + Telegram) */}
+      {activeTab === "cloud" && (
+        <form onSubmit={handleSaveCloudSettings} className="space-y-5">
+          {cloudSuccessMsg && (
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-300 text-xs font-bold animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{cloudSuccessMsg}</span>
             </div>
-            <p className="text-slate-500 text-[11px]">
-              يتم ترحيل أرصدة العملاء والموردين والخزائن وحسابات الأرباح المحتجزة تلقائياً في نهاية كل سنة مالية.
+          )}
+
+          <div className="app-card p-6 space-y-4">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-blue-600" />
+              <span>ربط التطبيق بخادم Cloudflare Worker وبوت تليجرام</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              هذا التطبيق لا يحتوي على أي محاكاة داخلية لبوت تليجرام. للتحكم الفعلي بالتطبيق عن بعد (تفعيل
+              التراخيص، استقبال رسائل الدعم الفني، متابعة المشتركين)، يجب نشر ملف{" "}
+              <code className="font-mono text-blue-600">cloudflare-worker/worker.js</code> على Cloudflare Workers،
+              ثم ضبط رابط الـ Worker هنا. بعد النشر يتحكم بوت تليجرام في التطبيق مباشرة عبر Webhook حقيقي على
+              Cloudflare — وليس عبر أي واجهة داخل هذا التطبيق.
             </p>
+
+            <div className="grid grid-cols-1 gap-4 text-xs pt-2">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  رابط Cloudflare Worker (Base URL):
+                </label>
+                <input
+                  type="text"
+                  value={appSettings.cloudflare_worker_url || ""}
+                  onChange={(e) => setAppSettings({ ...appSettings, cloudflare_worker_url: e.target.value })}
+                  placeholder="https://your-worker.workers.dev"
+                  dir="ltr"
+                  className="form-input text-xs font-mono"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  اتركه فارغاً لإبقاء التطبيق يعمل أوفلاين بالكامل بدون أي ربط سحابي.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">كود العميل الفريد (لاستخدامه في أوامر البوت):</div>
+                  <div className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 mt-0.5" dir="ltr">
+                    {company.client_code}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyClientCode}
+                  className="btn text-xs py-1.5 px-3 flex items-center gap-1.5"
+                >
+                  {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedCode ? "تم النسخ" : "نسخ الكود"}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div className="app-card p-6 space-y-3">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">بيانات الدعم الفني الظاهرة للعميل</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              هذه البيانات تظهر في صفحة «حول التطبيق والدعم الفني» — اتركها فارغة لإخفاء أي قسم منها.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-2">
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">اسم جهة الدعم الفني:</label>
+                <input
+                  type="text"
+                  value={appSettings.developer_name}
+                  onChange={(e) => setAppSettings({ ...appSettings, developer_name: e.target.value })}
+                  className="form-input text-xs"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">هاتف / واتساب الدعم:</label>
+                <input
+                  type="text"
+                  value={appSettings.whatsapp}
+                  onChange={(e) =>
+                    setAppSettings({ ...appSettings, whatsapp: e.target.value, phone: e.target.value })
+                  }
+                  className="form-input text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">معرف تليجرام (بدون @):</label>
+                <input
+                  type="text"
+                  value={appSettings.telegram}
+                  onChange={(e) => setAppSettings({ ...appSettings, telegram: e.target.value })}
+                  className="form-input text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">البريد الإلكتروني:</label>
+                <input
+                  type="email"
+                  value={appSettings.email}
+                  onChange={(e) => setAppSettings({ ...appSettings, email: e.target.value })}
+                  className="form-input text-xs font-mono"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">مواعيد الدعم الفني:</label>
+                <input
+                  type="text"
+                  value={appSettings.support_hours}
+                  onChange={(e) => setAppSettings({ ...appSettings, support_hours: e.target.value })}
+                  className="form-input text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="app-card p-6 space-y-3">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">خطوات نشر البوت وربطه بالتطبيق</h3>
+            <div className="space-y-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              <p>1. أنشئ بوت جديد من <b>@BotFather</b> في تليجرام واحصل على رمز التوكن.</p>
+              <p>2. انشر ملف <code className="font-mono text-blue-600">cloudflare-worker/worker.js</code> على Cloudflare Workers وحدد أسرار البيئة (Bot Token، Chat ID، KV Namespace).</p>
+              <p>3. اربط الويب هوك من تليجرام مباشرة برابط الـ Worker:</p>
+              <pre className="bg-slate-900 text-blue-400 p-3 rounded-lg font-mono text-xs overflow-x-auto" dir="ltr">
+                https://api.telegram.org/bot&lt;TOKEN&gt;/setWebhook?url=https://your-worker.workers.dev/telegram-webhook
+              </pre>
+              <p>4. ضع رابط الـ Worker أعلاه في هذا التطبيق ليتم تفعيل مراسلات الدعم الفني ومزامنتها تلقائياً.</p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button type="submit" className="btn btn-primary py-2.5 px-6 font-bold flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              <span>حفظ إعدادات الربط السحابي</span>
+            </button>
+          </div>
+        </form>
       )}
 
       {/* Tab: Backup and Maintenance */}
@@ -375,17 +516,17 @@ export const SettingsView: React.FC<Props> = ({ company: initialCompany, onRefre
           <div className="pt-6 border-t border-rose-100 dark:border-rose-950/50 space-y-3">
             <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
               <AlertTriangle className="w-5 h-5" />
-              <span>إعادة ضبط البيانات الأصلية (Seed Reset)</span>
+              <span>إعادة ضبط المصنع (حذف جميع البيانات)</span>
             </div>
             <p className="text-xs text-slate-500">
-              حذف كافة العمليات المدخلة واستعادة البيانات التجريبية الافتراضية للنظام.
+              حذف كافة العمليات والبيانات المدخلة نهائياً وإعادة النظام إلى حالته الفارغة الأولى.
             </p>
             <button
               onClick={handleResetData}
               className="btn bg-rose-600 hover:bg-rose-700 text-white py-2 px-4 text-xs font-bold flex items-center gap-1.5"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>إعادة تعيين البيانات للوضع الافتراضي</span>
+              <span>إعادة ضبط المصنع الآن</span>
             </button>
           </div>
         </div>

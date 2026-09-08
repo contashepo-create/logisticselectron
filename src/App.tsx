@@ -19,10 +19,12 @@ import { CustomersView } from "./views/CustomersView";
 import { SuppliersView } from "./views/SuppliersView";
 import { VehiclesView } from "./views/VehiclesView";
 import { EmployeesView } from "./views/EmployeesView";
+import { AdvancesView } from "./views/AdvancesView";
+import { DeductionsView } from "./views/DeductionsView";
+import { PayrollView } from "./views/PayrollView";
 import { TreasuryView } from "./views/TreasuryView";
 import { ReportsView } from "./views/ReportsView";
-import { TelegramBotView } from "./views/TelegramBotView";
-import { SupportChatView } from "./views/SupportChatView";
+import { FinancialYearsView } from "./views/FinancialYearsView";
 import { AboutAppView } from "./views/AboutAppView";
 import { SettingsView } from "./views/SettingsView";
 
@@ -132,6 +134,18 @@ export const App: React.FC = () => {
             <EmployeesView company={company} onRefreshData={refreshAllData} />
           )}
 
+          {activeTab === "advances" && (
+            <AdvancesView company={company} onNavigate={setActiveTab} />
+          )}
+
+          {activeTab === "deductions" && (
+            <DeductionsView company={company} onRefreshData={refreshAllData} />
+          )}
+
+          {activeTab === "payroll" && (
+            <PayrollView company={company} onRefreshData={refreshAllData} />
+          )}
+
           {activeTab === "treasury" && (
             <TreasuryView company={company} onRefreshData={refreshAllData} />
           )}
@@ -140,20 +154,7 @@ export const App: React.FC = () => {
             <ReportsView company={company} />
           )}
 
-          {activeTab === "telegram" && (
-            <TelegramBotView
-              company={company}
-              license={license}
-              onRefreshData={refreshAllData}
-            />
-          )}
-
-          {activeTab === "support" && (
-            <SupportChatView
-              company={company}
-              onRefreshData={refreshAllData}
-            />
-          )}
+          {activeTab === "financial-years" && <FinancialYearsView />}
 
           {activeTab === "about" && (
             <AboutAppView company={company} />

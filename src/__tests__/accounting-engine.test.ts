@@ -25,7 +25,7 @@ import {
   savePayroll,
   saveDeduction,
   saveCreditDebitNote,
-  resetAllDataToDemo,
+  __loadSampleDataForTests,
   getInvoices,
   activateLicenseKey,
   getLicenseInfo,
@@ -38,7 +38,7 @@ import { roundMoney } from "../lib/rules";
 describe("Accounting Engine & Financial Calculations", () => {
   beforeEach(() => {
     // Reset to clean test state
-    resetAllDataToDemo();
+    __loadSampleDataForTests();
   });
 
   describe("1. Currency Rounding & Math Precision", () => {

@@ -27,17 +27,35 @@ import {
   INITIAL_BANKS,
   INITIAL_CASHBOXES,
   INITIAL_COMPANY,
+  INITIAL_CREDIT_DEBIT_NOTES,
   INITIAL_CUSTOMERS,
   INITIAL_DEDUCTIONS,
   INITIAL_EMPLOYEES,
   INITIAL_INVOICES,
   INITIAL_PAYMENTS,
+  INITIAL_PAYROLLS,
   INITIAL_PURCHASES,
   INITIAL_RECEIPTS,
   INITIAL_SUPPLIERS,
   INITIAL_VEHICLES,
   INITIAL_YEARS,
 } from "./demo-data";
+import {
+  SAMPLE_APP_SETTINGS,
+  SAMPLE_BANKS,
+  SAMPLE_CASHBOXES,
+  SAMPLE_COMPANY,
+  SAMPLE_CUSTOMERS,
+  SAMPLE_DEDUCTIONS,
+  SAMPLE_EMPLOYEES,
+  SAMPLE_INVOICES,
+  SAMPLE_PAYMENTS,
+  SAMPLE_PURCHASES,
+  SAMPLE_RECEIPTS,
+  SAMPLE_SUPPLIERS,
+  SAMPLE_VEHICLES,
+  SAMPLE_YEARS,
+} from "./sample-data";
 import { RuleError, roundMoney, txt } from "./rules";
 
 const STORAGE_KEY_PREFIX = "logistics_desktop_db_v2_";
@@ -1210,17 +1228,22 @@ export function deleteCreditDebitNote(id: number): void {
 // ---------------------------------------------------------------------------
 
 export function getSupportMessages(): SupportMessage[] {
-  return getItem<SupportMessage[]>("support_messages", [
-    {
-      id: "msg_welcome_01",
-      company_id: getCompany().id,
-      sender: "admin",
-      sender_name: "الدعم الفني والخدمات",
-      body: "أهلاً بك في النظام المحاسبي لخدمات النقل واللوجستيات! يمكنك كتابة أي استفسار أو طلب مساعدة هنا وسيرد عليك المطور فوراً عبر البوت.",
-      is_read: true,
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-  ]);
+  return getItem<SupportMessage[]>("support_messages", []);
+}
+
+/** حفظ رسائل واردة من الويب هوك السحابي (Cloudflare) مع تفادي التكرار */
+export function mergeSupportMessagesFromCloud(incoming: SupportMessage[]): void {
+  if (!incoming || incoming.length === 0) return;
+  const existing = getSupportMessages();
+  const existingIds = new Set(existing.map((m) => m.id));
+  const merged = [...existing];
+  for (const msg of incoming) {
+    if (!existingIds.has(msg.id)) {
+      merged.push(msg);
+    }
+  }
+  merged.sort((a, b) => (a.created_at > b.created_at ? 1 : -1));
+  setItem("support_messages", merged);
 }
 
 export function sendSupportMessage(body: string, sender: "client" | "admin" = "client"): SupportMessage {
@@ -1305,7 +1328,11 @@ export function importFullDatabaseBackup(jsonString: string): { success: boolean
   }
 }
 
-export function resetAllDataToDemo(): void {
+/**
+ * إعادة ضبط النظام بالكامل إلى حالته الأصلية الفارغة (بدون أي بيانات وهمية أو تجريبية).
+ * تُستخدم هذه الدالة فعلياً داخل واجهة الإعدادات كـ "إعادة ضبط المصنع".
+ */
+export function resetAllDataToBlank(): void {
   // Clear memory store
   inMemoryStore.clear();
 
@@ -1322,8 +1349,35 @@ export function resetAllDataToDemo(): void {
   setItem("receipts", INITIAL_RECEIPTS);
   setItem("payments", INITIAL_PAYMENTS);
   setItem("deductions", INITIAL_DEDUCTIONS);
-  setItem("payrolls", []);
+  setItem("payrolls", INITIAL_PAYROLLS);
   setItem("purchases", INITIAL_PURCHASES);
+  setItem("credit_debit_notes", INITIAL_CREDIT_DEBIT_NOTES);
+  setItem("support_messages", []);
+  setItem("license_key", "");
+}
+
+/**
+ * تحميل بيانات تجريبية (Sample/Fixture) — تُستخدم فقط من داخل الاختبارات الآلية (Vitest)
+ * ولا يجب استدعاؤها من أي واجهة مستخدم فعلية في التطبيق المُسلَّم للعميل.
+ */
+export function __loadSampleDataForTests(): void {
+  inMemoryStore.clear();
+
+  setItem("company", SAMPLE_COMPANY);
+  setItem("app_settings", SAMPLE_APP_SETTINGS);
+  setItem("financial_years", SAMPLE_YEARS);
+  setItem("customers", SAMPLE_CUSTOMERS);
+  setItem("employees", SAMPLE_EMPLOYEES);
+  setItem("vehicles", SAMPLE_VEHICLES);
+  setItem("cashboxes", SAMPLE_CASHBOXES);
+  setItem("banks", SAMPLE_BANKS);
+  setItem("suppliers", SAMPLE_SUPPLIERS);
+  setItem("invoices", SAMPLE_INVOICES);
+  setItem("receipts", SAMPLE_RECEIPTS);
+  setItem("payments", SAMPLE_PAYMENTS);
+  setItem("deductions", SAMPLE_DEDUCTIONS);
+  setItem("payrolls", []);
+  setItem("purchases", SAMPLE_PURCHASES);
   setItem("credit_debit_notes", []);
   setItem("license_key", "");
 }

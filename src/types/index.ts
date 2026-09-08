@@ -11,11 +11,13 @@ export type ViewType =
   | "suppliers"
   | "vehicles"
   | "employees"
+  | "advances"
+  | "deductions"
+  | "payroll"
   | "treasury"
   | "reports"
+  | "financial-years"
   | "about"
-  | "telegram-bot"
-  | "support-chat"
   | "settings";
 
 export type AccountKind = "cashbox" | "bank";
@@ -381,8 +383,6 @@ export interface AppSettings {
   visibility: Record<string, boolean>;
   custom_fields: CustomField[];
   cloudflare_worker_url?: string;
-  telegram_bot_token?: string;
-  telegram_admin_chat_id?: string;
   last_synced_at?: string;
 }
 

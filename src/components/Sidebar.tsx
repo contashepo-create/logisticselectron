@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -8,13 +8,16 @@ import {
   Building2,
   Truck,
   UserCheck,
+  DollarSign,
+  AlertCircle,
+  CreditCard,
   Wallet,
   PieChart,
-  Bot,
-  MessageSquare,
   Info,
   Settings,
   Calendar,
+  ChevronDown,
+  BookOpenCheck,
 } from "lucide-react";
 
 export type ActiveTab =
@@ -26,12 +29,34 @@ export type ActiveTab =
   | "suppliers"
   | "vehicles"
   | "employees"
+  | "advances"
+  | "deductions"
+  | "payroll"
   | "treasury"
   | "reports"
-  | "telegram"
-  | "support"
+  | "financial-years"
   | "about"
   | "settings";
+
+interface LeafItem {
+  id: ActiveTab;
+  label: string;
+  icon: React.FC<{ className?: string }>;
+  badge?: number;
+}
+
+interface GroupItem {
+  groupId: string;
+  label: string;
+  icon: React.FC<{ className?: string }>;
+  children: LeafItem[];
+}
+
+type NavEntry = LeafItem | GroupItem;
+
+function isGroup(entry: NavEntry): entry is GroupItem {
+  return (entry as GroupItem).children !== undefined;
+}
 
 interface Props {
   activeTab: ActiveTab;
@@ -44,25 +69,98 @@ export const Sidebar: React.FC<Props> = ({
   onSelectTab,
   supportUnreadCount = 0,
 }) => {
-  const menuItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
+  const navTree: NavEntry[] = [
     { id: "dashboard", label: "لوحة التحكم الرئيسية", icon: LayoutDashboard },
-    { id: "invoices", label: "فواتير النقل والرحلات", icon: FileText },
-    { id: "receipts", label: "سندات القبض (تحصيل)", icon: ArrowDownLeft },
-    { id: "payments", label: "سندات الصرف (مصروفات)", icon: ArrowUpRight },
-    { id: "customers", label: "العملاء وكشوف الحساب", icon: Users },
-    { id: "suppliers", label: "الموردون وفواتير الشراء", icon: Building2 },
-    { id: "vehicles", label: "الشاحنات وأداء الأسطول", icon: Truck },
-    { id: "employees", label: "الموظفون والرواتب والسلف", icon: UserCheck },
-    { id: "treasury", label: "الخزائن والحسابات البنكية", icon: Wallet },
-    { id: "reports", label: "التقارير المالية والأرباح", icon: PieChart },
+    {
+      groupId: "accounting",
+      label: "الحسابات",
+      icon: BookOpenCheck,
+      children: [
+        { id: "invoices", label: "الفواتير", icon: FileText },
+        { id: "receipts", label: "سندات القبض", icon: ArrowDownLeft },
+        { id: "payments", label: "سندات الصرف", icon: ArrowUpRight },
+      ],
+    },
+    {
+      groupId: "parties",
+      label: "العملاء والموردون",
+      icon: Users,
+      children: [
+        { id: "customers", label: "العملاء", icon: Users },
+        { id: "suppliers", label: "الموردون", icon: Building2 },
+      ],
+    },
+    {
+      groupId: "fleet",
+      label: "الأسطول",
+      icon: Truck,
+      children: [{ id: "vehicles", label: "الشاحنات", icon: Truck }],
+    },
+    {
+      groupId: "hr",
+      label: "الموظفون والرواتب والسلف",
+      icon: UserCheck,
+      children: [
+        { id: "employees", label: "دليل الموظفين والسائقين", icon: UserCheck },
+        { id: "advances", label: "السلف", icon: DollarSign },
+        { id: "deductions", label: "الخصومات والمخالفات", icon: AlertCircle },
+        { id: "payroll", label: "الرواتب", icon: CreditCard },
+      ],
+    },
+    { id: "treasury", label: "الخزينة والبنوك", icon: Wallet },
+    { id: "reports", label: "التقارير", icon: PieChart },
+    { id: "financial-years", label: "السنوات المالية", icon: Calendar },
+    { id: "settings", label: "الإعدادات", icon: Settings },
+    { id: "about", label: "حول التطبيق والدعم الفني", icon: Info },
   ];
 
-  const secondaryItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
-    { id: "telegram", label: "بوت تليجرام والمشتركين", icon: Bot },
-    { id: "support", label: "الدعم الفني والمراسلة", icon: MessageSquare, badge: supportUnreadCount },
-    { id: "about", label: "حول التطبيق والمطور", icon: Info },
-    { id: "settings", label: "الإعدادات والسنوات المالية", icon: Settings },
-  ];
+  const findActiveGroup = (): string | null => {
+    for (const entry of navTree) {
+      if (isGroup(entry) && entry.children.some((c) => c.id === activeTab)) {
+        return entry.groupId;
+      }
+    }
+    return null;
+  };
+
+  const [openGroup, setOpenGroup] = useState<string | null>(findActiveGroup());
+
+  const handleToggleGroup = (groupId: string) => {
+    setOpenGroup((prev) => (prev === groupId ? null : groupId));
+  };
+
+  const handleSelectLeaf = (id: ActiveTab, parentGroupId?: string) => {
+    onSelectTab(id);
+    if (parentGroupId) setOpenGroup(parentGroupId);
+  };
+
+  const renderLeafButton = (item: LeafItem, indent: boolean, accentClass?: string) => {
+    const Icon = item.icon;
+    const isActive = activeTab === item.id;
+    return (
+      <button
+        key={item.id}
+        onClick={() => handleSelectLeaf(item.id)}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-all ${
+          indent ? "ps-8" : ""
+        } ${
+          isActive
+            ? `${accentClass || "bg-blue-600"} text-white font-semibold shadow-md`
+            : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
+          <span>{item.label}</span>
+        </div>
+        {item.badge && item.badge > 0 ? (
+          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            {item.badge}
+          </span>
+        ) : null}
+      </button>
+    );
+  };
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 min-h-screen border-l border-slate-800 select-none">
@@ -73,69 +171,48 @@ export const Sidebar: React.FC<Props> = ({
         </div>
         <div>
           <div className="font-bold text-sm text-white leading-snug">نظام النقل المحاسبي</div>
-          <div className="text-[11px] text-blue-400 font-medium">Desktop Pro v2.4 (Win 7+)</div>
+          <div className="text-[11px] text-blue-400 font-medium">Desktop Pro (Win 7+)</div>
         </div>
       </div>
 
-      {/* Main Navigation Links */}
+      {/* Main Navigation Tree */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-1">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-2 pb-1">
-          العمليات والمحاسبة
-        </div>
+        {navTree.map((entry) => {
+          if (!isGroup(entry)) {
+            return renderLeafButton(entry, false);
+          }
 
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const GroupIcon = entry.icon;
+          const isGroupOpen = openGroup === entry.groupId;
+          const isChildActive = entry.children.some((c) => c.id === activeTab);
+
           return (
-            <button
-              key={item.id}
-              onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && item.badge > 0 ? (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
+            <div key={entry.groupId} className="space-y-1">
+              <button
+                onClick={() => handleToggleGroup(entry.groupId)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+                  isChildActive && !isGroupOpen
+                    ? "text-blue-400 bg-slate-800/40"
+                    : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <GroupIcon className="w-4 h-4" />
+                  <span>{entry.label}</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    isGroupOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-4 pb-1">
-          الخدمات السحابية والإدارة
-        </div>
-
-        {secondaryItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && item.badge > 0 ? (
-                <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                  {item.badge}
-                </span>
-              ) : null}
-            </button>
+              {isGroupOpen && (
+                <div className="space-y-1 py-0.5 border-r-2 border-slate-800 mr-3.5 pr-1">
+                  {entry.children.map((child) => renderLeafButton(child, true))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -143,8 +220,8 @@ export const Sidebar: React.FC<Props> = ({
       {/* Footer Info Box */}
       <div className="p-3 border-t border-slate-800/80 text-[11px] text-slate-400 bg-slate-950/40">
         <div className="flex justify-between items-center text-slate-400">
-          <span>المطور: محمد عبده</span>
-          <span className="text-emerald-400 font-semibold">أوفلاين 100%</span>
+          <span>يعمل أوفلاين بالكامل</span>
+          <span className="text-emerald-400 font-semibold">100%</span>
         </div>
       </div>
     </aside>

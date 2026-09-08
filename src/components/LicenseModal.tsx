@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { Company, LicenseInfo } from "@/types";
-import { activateLicenseKey } from "@/lib/storage";
+import { activateLicenseKey, getAppSettings } from "@/lib/storage";
 
 interface Props {
   isOpen: boolean;
@@ -59,11 +59,19 @@ export const LicenseModal: React.FC<Props> = ({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const whatsappUrl = `https://wa.me/966542520544?text=${encodeURIComponent(
-    `السلام عليكم، أود تفعيل اشتراك النظام المحاسبي لخدمات النقل.\nكود العميل: ${company.client_code}\nاسم الشركة: ${company.name}`
-  )}`;
+  const settings = getAppSettings();
+  const supportWhatsapp = (settings.whatsapp || "").replace(/\D/g, "");
+  const whatsappUrl = supportWhatsapp
+    ? `https://wa.me/${supportWhatsapp}?text=${encodeURIComponent(
+        `السلام عليكم، أود تفعيل اشتراك النظام المحاسبي لخدمات النقل.\nكود العميل: ${company.client_code}\nاسم الشركة: ${company.name}`
+      )}`
+    : "";
 
-  const telegramUrl = `https://t.me/conta_shepo`;
+  const telegramUrl = settings.telegram
+    ? settings.telegram.startsWith("http")
+      ? settings.telegram
+      : `https://t.me/${settings.telegram.replace("@", "")}`
+    : "";
 
   return (
     <div className="modal-overlay">
@@ -197,31 +205,37 @@ export const LicenseModal: React.FC<Props> = ({
           </form>
 
           {/* Contact Developer Quick Action */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
-            <div className="text-xs text-slate-500 dark:text-slate-400 mb-2.5 text-center">
-              للحصول على رمز تفعيل أو تجديد الاشتراك، تواصل فوراً مع المطور:
+          {(whatsappUrl || telegramUrl) && (
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-2.5 text-center">
+                للحصول على رمز تفعيل أو تجديد الاشتراك، تواصل مع الدعم الفني:
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-none py-2 flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    واتساب الدعم الفني
+                  </a>
+                )}
+                {telegramUrl && (
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white border-none py-2 flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                    تليجرام
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-none py-2 flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <MessageCircle className="w-4 h-4" />
-                واتساب المطور
-              </a>
-              <a
-                href={telegramUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white border-none py-2 flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <Send className="w-4 h-4" />
-                بوت / تليجرام
-              </a>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

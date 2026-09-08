@@ -413,10 +413,13 @@ export const Sidebar: React.FC<Props> = ({
             ${collapsed ? "justify-center px-0 py-2.5" : "gap-3 ps-3 pe-2.5 py-2"}
             ${
               isActive
-                ? `sb-item-active bg-gradient-to-l ${ACCENT_GRADIENT[item.accent]} text-white shadow-lg ${ACCENT_GLOW[item.accent]}`
+                ? `bg-gradient-to-l ${ACCENT_GRADIENT[item.accent]} text-white shadow-lg ${ACCENT_GLOW[item.accent]}`
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-900/[0.045] dark:hover:bg-white/[0.06]"
             }`}
         >
+          {/* لمعة تمر فوق العنصر عند تفعيله (مقصوصة داخل غلاف مستقل) */}
+          {isActive && <span key={item.id} className="sb-sheen" />}
+
           {/* شريط التفعيل الجانبي (للعناصر الرئيسية فقط — الفرعية لها خط الربط) */}
           {!child && (
             <span
@@ -442,7 +445,7 @@ export const Sidebar: React.FC<Props> = ({
           {/* النص */}
           {!collapsed && (
             <span
-              className={`flex-1 text-right truncate transition-transform duration-300 group-hover:-translate-x-0.5
+              className={`relative flex-1 text-right truncate transition-transform duration-300 group-hover:-translate-x-0.5
                 ${child ? "text-[12.5px]" : "text-[13.5px]"}
                 ${isActive ? "font-semibold" : "font-medium"}`}
             >
@@ -677,6 +680,7 @@ export const Sidebar: React.FC<Props> = ({
 
         {/* ============================ القائمة ============================ */}
         <nav
+          onScroll={tooltip ? hideTip : undefined}
           className={`sb-scroll relative flex-1 overflow-y-auto overflow-x-hidden pb-3
             ${collapsed ? "px-3 space-y-2" : "px-4 space-y-4"}`}
         >
@@ -725,7 +729,6 @@ export const Sidebar: React.FC<Props> = ({
           {collapsed ? (
             <div
               className="mx-auto w-9 h-9 grid place-items-center rounded-xl bg-emerald-500/10 dark:bg-emerald-400/10"
-              title="يعمل أوفلاين بالكامل"
               onMouseEnter={(e) => showTip(e, "يعمل أوفلاين بالكامل · 100%")}
               onMouseLeave={hideTip}
             >

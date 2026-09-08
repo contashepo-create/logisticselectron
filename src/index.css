@@ -262,13 +262,19 @@ body {
   transform: translateX(-1px) scale(0.985);
 }
 
-/* لمعة خفيفة تمر فوق العنصر النشط */
-.sb-item-active {
-  position: relative;
+/* لمعة خفيفة تمر فوق العنصر النشط.
+   ملاحظة: لا نستخدم overflow:hidden على الزر نفسه لأن ذلك يقصّ
+   شريط التفعيل الجانبي الموضوع خارج حدود الزر (‎-right-9px‎)،
+   لذلك تُقصّ اللمعة داخل غلاف مستقل. */
+.sb-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   overflow: hidden;
+  pointer-events: none;
 }
 
-.sb-item-active::after {
+.sb-sheen::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -280,7 +286,6 @@ body {
   );
   transform: translateX(-130%);
   animation: sbSheen 0.85s cubic-bezier(0.25, 0.8, 0.35, 1) 0.05s both;
-  pointer-events: none;
 }
 
 @keyframes sbSheen {
@@ -350,13 +355,19 @@ body {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
+  /* visibility يمنع وصول التركيز بلوحة المفاتيح للعناصر المطوية،
+     ويتأخر تطبيقه حتى تنتهي حركة الإغلاق */
+  visibility: hidden;
   transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.22s ease;
+    opacity 0.22s ease, visibility 0s linear 0.3s;
 }
 
 .sb-collapsible.is-open {
   grid-template-rows: 1fr;
   opacity: 1;
+  visibility: visible;
+  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease, visibility 0s linear 0s;
 }
 
 /* --- حركات الدخول --- */
@@ -525,7 +536,7 @@ body {
   .sb-ping,
   .sb-bar,
   .sb-tooltip,
-  .sb-item-active::after {
+  .sb-sheen::after {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
